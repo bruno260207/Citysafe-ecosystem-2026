@@ -4,7 +4,7 @@ from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 
 # Configuración técnica
-SECRET_KEY = "UNMSM_FISI_SMAT_SECRET_2026"
+SECRET_KEY = "UNMSM_FISI_CITY_SAFE_SECRET_2026"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

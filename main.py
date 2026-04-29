@@ -7,6 +7,7 @@ from app import models, schemas, crud
 from app.auth import create_token, verify_password, get_current_user
 
 from fastapi.middleware.cors import CORSMiddleware
+from app.auth import crear_token_acceso, obtener_identidad_actual
 
 Base.metadata.create_all(bind=engine)
 
@@ -51,6 +52,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Endpoint para obtener el Token (Simulación de Login)
+@app.post("/token", tags=["Seguridad"])
+async def login_para_obtener_token():
+    # En la Unidad II esto validará contra la tabla de usuarios
+    return {"access_token": crear_token_acceso({"sub": "admin_smat"}), "token_type": "bearer"}
+
+# Endpoint Protegido: Solo accesible con Token válido
+@app.post("/estaciones/", status_code=201, tags=["Infraestructura"])
+def crear_estacion(
+    estacion: schemas.EstacionCreate,
+    db: Session = Depends(get_db),
+    usuario: str = Depends(obtener_identidad_actual) # PROTECCIÓN JWT
+):
+    return crud.crear_estacion(db=db, estacion=estacion)
 
 # 👤 REGISTER
 @app.post(
