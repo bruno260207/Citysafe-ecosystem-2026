@@ -5,6 +5,10 @@ from sqlalchemy.orm import Session
 from app.database import Base, engine, get_db
 from app import models, schemas, crud
 from app.auth import create_token, verify_password, get_current_user
+import models
+from database import engine
+# Esta línea es la "magia" que lee models.py y crea las tablas si no existen.
+models.Base.metadata.create_all(bind=engine)
 
 Base.metadata.create_all(bind=engine)
 

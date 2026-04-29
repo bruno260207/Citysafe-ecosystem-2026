@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey
-from sqlalchemy.orm import relationship # <-- Agrega esta línea
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 class User(Base):
