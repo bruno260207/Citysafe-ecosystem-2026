@@ -6,6 +6,8 @@ from app.database import Base, engine, get_db
 from app import models, schemas, crud
 from app.auth import create_token, verify_password, get_current_user
 
+from fastapi.middleware.cors import CORSMiddleware
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -36,6 +38,18 @@ Optimizar la respuesta ante incidentes y mejorar el patrullaje urbano mediante a
         "name": "MIT",
         "url": "https://opensource.org/licenses/MIT",
     },
+)
+
+origins = [
+    "http://localhost:3000",  # frontend
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # 👤 REGISTER
