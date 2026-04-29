@@ -7,7 +7,6 @@ from app import models, schemas, crud
 from app.auth import create_token, verify_password, get_current_user
 
 from fastapi.middleware.cors import CORSMiddleware
-from app.auth import crear_token_acceso, obtener_identidad_actual
 
 Base.metadata.create_all(bind=engine)
 
