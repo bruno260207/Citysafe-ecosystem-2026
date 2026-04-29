@@ -9,7 +9,33 @@ from app.auth import create_token, verify_password, get_current_user
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title = "City Safe 2026"
+    title="CitySafe - Sistema de Monitoreo Urbano",
+    description="""
+API para la gestión de incidentes urbanos y alertas de seguridad ciudadana.
+
+Este sistema permite a los ciudadanos reportar incidentes en tiempo real y a las autoridades
+visualizar la información para una mejor toma de decisiones.
+
+**Funcionalidades principales:**
+* **Usuarios:** Registro y autenticación mediante JWT.
+* **Incidentes:** Reporte de robos, emergencias y actividades sospechosas.
+* **Geolocalización:** Los incidentes incluyen latitud y longitud.
+* **Visualización:** Datos listos para integrarse con mapas y simuladores.
+
+**Objetivo:**
+Optimizar la respuesta ante incidentes y mejorar el patrullaje urbano mediante análisis de datos.
+""",
+    version="1.0.0",
+    terms_of_service="http://citysafe.com/terms/",
+    contact={
+        "name": "Soporte Técnico CitySafe",
+        "url": "http://citysafe.com",
+        "email": "soporte@citysafe.com",
+    },
+    license_info={
+        "name": "MIT",
+        "url": "https://opensource.org/licenses/MIT",
+    },
 )
 
 # 👤 REGISTER
