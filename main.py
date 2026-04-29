@@ -13,7 +13,13 @@ app = FastAPI(
 )
 
 # 👤 REGISTER
-@app.post("/register")
+@app.post(
+    "/register",
+    status_code=201,
+    tags=["Autenticación"],
+    summary="Registrar un nuevo usuario",
+    description="Crea una cuenta de usuario en el sistema usando email y contraseña."
+)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
     existing = crud.get_user_by_email(db, user.email)
@@ -24,7 +30,13 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     return {"msg": "Usuario creado"}
 
 # 🔐 LOGIN
-@app.post("/login")
+@app.post(
+    "/login",
+    status_code=200,
+    tags=["Autenticación"],
+    summary="Iniciar sesión",
+    description="Verifica las credenciales del usuario y retorna un token JWT para autenticación."
+)
 def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
 
     db_user = crud.get_user_by_email(db, user.email)
@@ -37,7 +49,13 @@ def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
     return {"access_token": token, "token_type": "bearer"}
 
 # 🚨 CREATE INCIDENT
-@app.post("/incidents")
+@app.post(
+    "/incidents",
+    status_code=201,
+    tags=["Incidentes"],
+    summary="Registrar un incidente",
+    description="Crea un nuevo incidente asociado al usuario autenticado."
+)
 def create_incident(
     incident: schemas.IncidentCreate,
     db: Session = Depends(get_db),
@@ -46,6 +64,12 @@ def create_incident(
     return crud.create_incident(db, incident, int(user_id))
 
 # 📡 GET INCIDENTS
-@app.get("/incidents")
+@app.get(
+    "/incidents",
+    status_code=200,
+    tags=["Incidentes"],
+    summary="Obtener lista de incidentes",
+    description="Retorna todos los incidentes registrados en el sistema."
+)
 def get_incidents(db: Session = Depends(get_db)):
     return crud.get_incidents(db)
