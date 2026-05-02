@@ -1,33 +1,19 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
-from app.database import Base
+from datetime import datetime
+from .database import Base
 
-class User(Base):
-    __tablename__ = "users"
-
+class EstacionDB(Base):
+    __tablename__ = "estaciones"
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True)
-    hashed_password = Column(String)
-    
-    # RELACIÓN: Esto permite que desde un objeto "user" puedas ver todos sus incidentes
-    # Ej: usuario.incidents
-    incidents = relationship("Incident", back_populates="user") 
+    nombre = Column(String, unique=True)
+    ubicacion = Column(String)
+    lecturas = relationship("LecturaDB", back_populates="estacion")
 
-class Incident(Base):
-    __tablename__ = "incidents"
-
+class LecturaDB(Base):
+    __tablename__ = "lecturas"
     id = Column(Integer, primary_key=True, index=True)
-    type = Column(String)
-    description = Column(String)
-    latitude = Column(Float)
-    longitude = Column(Float)
-    urgency = Column(Integer)
-
-    # LLAVE FORÁNEA: Conecta el incidente con el usuario 
-    user_id = Column(Integer, ForeignKey("users.id"))
-    
-    # RELACIÓN: Esto permite que desde un incidente sepas quién lo creó
-    # Ej: incidente.user.email
-    user = relationship("User", back_populates="incidents")
-
-    
+    valor = Column(Float)
+    fecha = Column(DateTime, default=datetime.utcnow)
+    estacion_id = Column(Integer, ForeignKey("estaciones.id"))
+    estacion = relationship("EstacionDB", back_populates="lecturas")
