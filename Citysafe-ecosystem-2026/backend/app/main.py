@@ -7,10 +7,6 @@ from app import models, schemas, crud
 from app.auth import create_token, verify_password, get_current_user
 from fastapi.middleware.cors import CORSMiddleware
 
-import models
-from database import engine
-models.Base.metadata.create_all(bind=engine)
-
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -59,14 +55,14 @@ app.add_middleware(
 @app.post("/token", tags=["Seguridad"])
 async def login_para_obtener_token():
     # En la Unidad II esto validará contra la tabla de usuarios
-    return {"access_token": crear_token_acceso({"sub": "admin_city_safe"}), "token_type": "bearer"}
+    return {"access_token": create_token({"sub": "admin_city_safe"}), "token_type": "bearer"}
 
 # Endpoint Protegido: Solo accesible con Token válido
 @app.post("/estaciones/", status_code=201, tags=["Infraestructura"])
 def crear_estacion(
     estacion: schemas.EstacionCreate,
     db: Session = Depends(get_db),
-    usuario: str = Depends(obtener_identidad_actual) # PROTECCIÓN JWT
+    usuario: str = Depends(get_current_user) # PROTECCIÓN JWT
 ):
     return crud.crear_estacion(db=db, estacion=estacion)
 
