@@ -1,20 +1,32 @@
-from jose import jwt
+from jose import jwt, JWTError
 from datetime import datetime, timedelta
-from fastapi import HTTPException, Depends
+from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 
-SECRET_KEY = "UNMSM_FISI_SMAT_2026"
+# Configuración técnica
+SECRET_KEY = "UNMSM_FISI_CITY_SAFE_SECRET_2026"
 ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-def crear_token(data: dict):
-    expiracion = datetime.utcnow() + timedelta(minutes=60)
-    data.update({"exp": expiracion})
-    return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
+def create_token(data: dict):
+    para_encriptar = data.copy()
+    expiracion = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    para_encriptar.update({"exp": expiracion})
+    return jwt.encode(para_encriptar, SECRET_KEY, algorithm=ALGORITHM)
 
-def validar_token(token: str = Depends(oauth2_scheme)):
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="No se pudo validar el token de acceso",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload.get("sub")
-    except:
-        raise HTTPException(status_code=401, detail="Token inválido")
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        return username
+    except JWTError:
+        raise credentials_exception
