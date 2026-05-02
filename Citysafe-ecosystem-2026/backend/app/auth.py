@@ -29,4 +29,4 @@ async def obtener_identidad_actual(token: str = Depends(oauth2_scheme)):
             raise credentials_exception
         return username
     except JWTError:
-    raise credentials_exception
+        raise credentials_exception
