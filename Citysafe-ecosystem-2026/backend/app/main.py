@@ -1,11 +1,11 @@
-# (rutas)
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-
 from app.database import Base, engine, get_db
-from app import models, schemas, crud
+from app import schemas, crud
 from app.auth import create_token, verify_password, get_current_user
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.openapi.utils import get_openapi
 
 Base.metadata.create_all(bind=engine)
 
@@ -39,6 +39,34 @@ Optimizar la respuesta ante incidentes y mejorar el patrullaje urbano mediante a
     },
 )
 
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        terms_of_service=app.terms_of_service,
+        contact=app.contact,
+        license_info=app.license_info,
+        routes=app.routes,
+    )
+    openapi_schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer"
+        }
+    }
+    for path, methods in openapi_schema["paths"].items():
+        for method, details in methods.items():
+            if path not in ["/register", "/login"]:
+                details["security"] = [{"BearerAuth": []}]
+    
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
+
 origins = [
     "http://localhost:3000",  # frontend
 ]
@@ -50,21 +78,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Endpoint para obtener el Token (Simulación de Login)
-@app.post("/token", tags=["Seguridad"])
-async def login_para_obtener_token():
-    # En la Unidad II esto validará contra la tabla de usuarios
-    return {"access_token": create_token({"sub": "admin_city_safe"}), "token_type": "bearer"}
-
-# Endpoint Protegido: Solo accesible con Token válido
-@app.post("/estaciones/", status_code=201, tags=["Infraestructura"])
-def crear_estacion(
-    estacion: schemas.EstacionCreate,
-    db: Session = Depends(get_db),
-    usuario: str = Depends(get_current_user) # PROTECCIÓN JWT
-):
-    return crud.crear_estacion(db=db, estacion=estacion)
 
 # 👤 REGISTER
 @app.post(
@@ -81,7 +94,7 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Usuario ya existe")
 
     crud.create_user(db, user.email, user.password)
-    return {"msg": "Usuario creado"}
+    return {"msg": "Usuario creado", "email": user.email}
 
 # 🔐 LOGIN
 @app.post(
@@ -91,11 +104,11 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     summary="Iniciar sesión",
     description="Verifica las credenciales del usuario y retorna un token JWT para autenticación."
 )
-def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
 
-    db_user = crud.get_user_by_email(db, user.email)
+    db_user = crud.get_user_by_email(db, form_data.username)
 
-    if not db_user or not verify_password(user.password, db_user.hashed_password):
+    if not db_user or not verify_password(form_data.password, db_user.hashed_password):
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
 
     token = create_token({"sub": str(db_user.id)})
@@ -108,14 +121,15 @@ def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
     status_code=201,
     tags=["Incidentes"],
     summary="Registrar un incidente",
-    description="Crea un nuevo incidente asociado al usuario autenticado."
+    description="Crea un nuevo incidente asociado al usuario autenticado.",
+    response_model=schemas.IncidentResponse
 )
 def create_incident(
     incident: schemas.IncidentCreate,
     db: Session = Depends(get_db),
-    user_id: str = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
-    return crud.create_incident(db, incident, int(user_id))
+    return crud.create_incident(db, incident, current_user.id)
 
 # 📡 GET INCIDENTS
 @app.get(
@@ -123,7 +137,11 @@ def create_incident(
     status_code=200,
     tags=["Incidentes"],
     summary="Obtener lista de incidentes",
-    description="Retorna todos los incidentes registrados en el sistema."
+    description="Retorna todos los incidentes registrados en el sistema.",
+    response_model=list[schemas.IncidentResponse]
 )
-def get_incidents(db: Session = Depends(get_db)):
+def get_incidents(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
     return crud.get_incidents(db)

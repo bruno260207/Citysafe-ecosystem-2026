@@ -1,4 +1,3 @@
-# ESTE
 from sqlalchemy.orm import Session
 from app.models import User, Incident
 from app.auth import hash_password
@@ -29,5 +28,5 @@ def create_incident(db: Session, incident_data, user_id: int):
     db.refresh(incident)
     return incident
 
-def get_incidents(db: Session):
-    return db.query(Incident).all()
+def get_incidents(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(Incident).offset(skip).limit(limit).all()

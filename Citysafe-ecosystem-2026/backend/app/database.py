@@ -1,7 +1,5 @@
-# app/database.py
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
 
 # 1. Dirección de la base de datos
 # Se crea un archivo local llamado 'citysafe.db'.
