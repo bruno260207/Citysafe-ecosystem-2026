@@ -14,8 +14,8 @@ class UserLogin(BaseModel):
 class IncidentCreate(BaseModel):
     type: str
     description: Optional[str] = None
-    latitude: float
-    longitude: float
+    latitude: float = Field(..., ge=-90, le=90)
+    longitude: float = Field(..., ge=-180, le=180)
     urgency: int = Field(..., ge=1, le=5)
 
 class IncidentResponse(BaseModel):
