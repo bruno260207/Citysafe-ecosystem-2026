@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
+from enum import Enum
+from datetime import datetime
 
 # USER
 class UserCreate(BaseModel):
@@ -11,8 +13,16 @@ class UserLogin(BaseModel):
     password: str = Field(..., min_length=6)
 
 # INCIDENT
+class IncidentType(str, Enum):
+    robo = "robo"
+    incendio = "incendio"
+    salud = "salud"
+    sospechoso = "sospechoso"
+    accidente = "accidente"
+    otros = "otros"
+
 class IncidentCreate(BaseModel):
-    type: str
+    type: IncidentType
     description: Optional[str] = None
     latitude: float = Field(..., ge=-90, le=90)
     longitude: float = Field(..., ge=-180, le=180)
@@ -20,11 +30,12 @@ class IncidentCreate(BaseModel):
 
 class IncidentResponse(BaseModel):
     id: int
-    type: str
+    type: IncidentType
     description: Optional[str] = None
     latitude: float
     longitude: float
     urgency: int
     user_id: int
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

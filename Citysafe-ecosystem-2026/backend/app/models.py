@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime 
+from datetime import datetime, timezone
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -26,7 +27,7 @@ class Incident(Base):
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
     urgency = Column(Integer, nullable=False)
-
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     # LLAVE FORÁNEA: Conecta el incidente con el usuario 
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     
