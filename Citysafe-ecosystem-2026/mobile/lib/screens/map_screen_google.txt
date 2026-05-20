@@ -1,0 +1,116 @@
+import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../models/incident.dart';
+import '../services/api_service.dart';
+
+class MapScreen extends StatefulWidget {
+  const MapScreen({super.key});
+
+  @override
+  State<MapScreen> createState() => _MapScreenState();
+}
+
+class _MapScreenState extends State<MapScreen> {
+  GoogleMapController? _mapController;
+  Set<Marker> _markers = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadIncidents();
+  }
+
+  Future<void> _loadIncidents() async {
+    try {
+      final incidents = await ApiService().fetchIncidents();
+      setState(() {
+        _markers = incidents.map((inc) {
+          return Marker(
+            markerId: MarkerId(inc.id.toString()),
+            position: LatLng(inc.latitude, inc.longitude),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              _urgencyHue(inc.urgency),
+            ),
+            infoWindow: InfoWindow(
+              title: inc.type.toUpperCase(),
+              snippet: '${inc.description ?? ""} | Urgencia: ${inc.urgency}',
+            ),
+          );
+        }).toSet();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al cargar incidentes')),
+      );
+    }
+  }
+
+  double _urgencyHue(int urgency) {
+    if (urgency <= 2) return BitmapDescriptor.hueGreen;
+    if (urgency == 3) return BitmapDescriptor.hueOrange;
+    return BitmapDescriptor.hueRed;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1A1A2E),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF16213E),
+        title: const Text('Mapa de Incidentes', style: TextStyle(color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: () {
+              setState(() => _isLoading = true);
+              _loadIncidents();
+            },
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          GoogleMap(
+            initialCameraPosition: const CameraPosition(
+              target: LatLng(-12.0464, -77.0428), // Lima, Perú
+              zoom: 13,
+            ),
+            markers: _markers,
+            onMapCreated: (controller) => _mapController = controller,
+            myLocationEnabled: true,
+            myLocationButtonEnabled: true,
+          ),
+          if (_isLoading)
+            const Center(
+              child: CircularProgressIndicator(color: Color(0xFF4FC3F7)),
+            ),
+          Positioned(
+            bottom: 16,
+            left: 16,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF16213E),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Leyenda', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                  SizedBox(height: 6),
+                  Row(children: [Icon(Icons.location_on, color: Colors.green, size: 16), SizedBox(width: 4), Text('Urgencia 1-2', style: TextStyle(color: Colors.white70, fontSize: 11))]),
+                  Row(children: [Icon(Icons.location_on, color: Colors.orange, size: 16), SizedBox(width: 4), Text('Urgencia 3', style: TextStyle(color: Colors.white70, fontSize: 11))]),
+                  Row(children: [Icon(Icons.location_on, color: Colors.red, size: 16), SizedBox(width: 4), Text('Urgencia 4-5', style: TextStyle(color: Colors.white70, fontSize: 11))]),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
