@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AuthService {
   // Emulador Android → 10.0.2.2
   // Dispositivo físico → IP de tu PC en la red, ej: http://192.168.1.10:8000
-  static const String baseUrl = "http://10.0.2.2:8000";
+  static const String baseUrl = "http://localhost:8000";
 
   /// Retorna el rol ("ciudadano" o "central") si el login fue exitoso, null si falló.
   Future<String?> login(String email, String password) async {
