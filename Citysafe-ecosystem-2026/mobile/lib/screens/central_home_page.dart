@@ -85,7 +85,7 @@ class _CentralHomePageState extends State<CentralHomePage>
       },
       onError: (_) {},
     );
-    _sseSubscription = sub as StreamSubscription<String>?;
+    _sseSubscription = sub; 
   }
 
   void _startToastTimer() {
