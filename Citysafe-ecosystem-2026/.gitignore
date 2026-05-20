@@ -20,3 +20,10 @@ mobile/.pub/
 mobile/build/
 mobile/android/local.properties
 mobile/ios/Flutter/Generated.xcconfig
+
+#--MOBILE--
+# Flutter adicionales
+mobile/android/.gradle/
+mobile/android/captures/
+mobile/macos/Flutter/GeneratedPluginRegistrant.swift
+mobile/*.g.dart
