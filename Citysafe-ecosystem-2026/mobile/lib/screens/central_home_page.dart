@@ -413,7 +413,7 @@ class _CentralHomePageState extends State<CentralHomePage>
         : const LatLng(-12.0464, -77.0428); // Lima por defecto
 
     return FlutterMap(
-      options: MapOptions(center: center, zoom: 13),
+      options: MapOptions(initialCenter: center, initialZoom: 13),
       children: [
         TileLayer(
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
