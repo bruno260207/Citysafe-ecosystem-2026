@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../models/incident.dart';
 import 'login_screen.dart';
 import 'add_incident_screen.dart';
+import 'heatmap_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -59,6 +60,7 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         actions: [
+          
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white54),
             onPressed: () async {

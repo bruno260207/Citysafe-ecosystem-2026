@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import '../services/api_service.dart';
 
 class AddIncidentScreen extends StatefulWidget {
@@ -15,6 +16,7 @@ class _AddIncidentScreenState extends State<AddIncidentScreen> {
   String _selectedType = 'robo';
   int _urgency = 1;
   bool _isLoading = false;
+  bool _isLoadingLocation = false;
 
   final List<Map<String, dynamic>> _types = [
     {'value': 'robo', 'label': 'Robo', 'icon': Icons.money_off},
@@ -24,6 +26,68 @@ class _AddIncidentScreenState extends State<AddIncidentScreen> {
     {'value': 'accidente', 'label': 'Accidente', 'icon': Icons.car_crash},
     {'value': 'otros', 'label': 'Otros', 'icon': Icons.warning_amber},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Obtener ubicación automáticamente al abrir la pantalla
+    _obtenerUbicacion();
+  }
+
+  Future<void> _obtenerUbicacion() async {
+    setState(() => _isLoadingLocation = true);
+
+    try {
+      // Verificar si el servicio de ubicación está habilitado
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _mostrarError('El GPS está desactivado. Actívalo o ingresa las coordenadas manualmente.');
+        setState(() => _isLoadingLocation = false);
+        return;
+      }
+
+      // Verificar y solicitar permisos
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _mostrarError('Permiso de ubicación denegado. Ingresa las coordenadas manualmente.');
+          setState(() => _isLoadingLocation = false);
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        _mostrarError('Permiso de ubicación bloqueado. Habilítalo en los ajustes del dispositivo.');
+        setState(() => _isLoadingLocation = false);
+        return;
+      }
+
+      // Obtener posición actual
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      setState(() {
+        _latController.text = position.latitude.toStringAsFixed(6);
+        _lngController.text = position.longitude.toStringAsFixed(6);
+        _isLoadingLocation = false;
+      });
+    } catch (e) {
+      _mostrarError('No se pudo obtener la ubicación. Ingresa las coordenadas manualmente.');
+      setState(() => _isLoadingLocation = false);
+    }
+  }
+
+  void _mostrarError(String mensaje) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor: Colors.red.shade700,
+      ),
+    );
+  }
 
   void _guardar() async {
     if (_latController.text.isEmpty || _lngController.text.isEmpty) {
@@ -111,14 +175,37 @@ class _AddIncidentScreenState extends State<AddIncidentScreen> {
               ),
             ),
             const SizedBox(height: 20),
+
+            // — SECCIÓN UBICACIÓN —
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Ubicación', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                TextButton.icon(
+                  onPressed: _isLoadingLocation ? null : _obtenerUbicacion,
+                  icon: _isLoadingLocation
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF4FC3F7)),
+                        )
+                      : const Icon(Icons.my_location, size: 16, color: Color(0xFF4FC3F7)),
+                  label: Text(
+                    _isLoadingLocation ? 'Obteniendo...' : 'Usar mi ubicación',
+                    style: const TextStyle(color: Color(0xFF4FC3F7), fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Latitud', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                      const SizedBox(height: 8),
+                      const Text('Latitud', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                      const SizedBox(height: 6),
                       TextField(
                         controller: _latController,
                         style: const TextStyle(color: Colors.white),
@@ -139,8 +226,8 @@ class _AddIncidentScreenState extends State<AddIncidentScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Longitud', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                      const SizedBox(height: 8),
+                      const Text('Longitud', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                      const SizedBox(height: 6),
                       TextField(
                         controller: _lngController,
                         style: const TextStyle(color: Colors.white),
@@ -159,6 +246,7 @@ class _AddIncidentScreenState extends State<AddIncidentScreen> {
               ],
             ),
             const SizedBox(height: 20),
+
             const Text('Nivel de urgencia', style: TextStyle(color: Colors.white70, fontSize: 13)),
             const SizedBox(height: 8),
             Row(
