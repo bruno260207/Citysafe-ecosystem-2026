@@ -21,8 +21,8 @@ class _AddIncidentScreenState extends State<AddIncidentScreen> {
     {'value': 'incendio', 'label': 'Incendio', 'icon': Icons.local_fire_department},
     {'value': 'salud', 'label': 'Salud', 'icon': Icons.medical_services},
     {'value': 'sospechoso', 'label': 'Sospechoso', 'icon': Icons.visibility},
-    {'value': 'vandalismo', 'label': 'Vandalismo', 'icon': Icons.broken_image},
     {'value': 'accidente', 'label': 'Accidente', 'icon': Icons.car_crash},
+    {'value': 'otros', 'label': 'Otros', 'icon': Icons.warning_amber},
   ];
 
   void _guardar() async {

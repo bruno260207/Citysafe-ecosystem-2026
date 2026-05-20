@@ -1,38 +1,59 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import 'home_page.dart';
-import 'register_screen.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passController = TextEditingController();
   bool _isLoading = false;
 
-  void _handleLogin() async {
+  void _handleRegister() async {
+    if (_emailController.text.isEmpty || _passController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Completa todos los campos')),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
-    bool success = await AuthService().login(
-      _emailController.text.trim(),
-      _passController.text.trim(),
-    );
-
-    setState(() => _isLoading = false);
-
-    if (success) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8000/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': _emailController.text.trim(),
+          'password': _passController.text.trim(),
+        }),
       );
-    } else {
+
+      setState(() => _isLoading = false);
+
+      if (response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('¡Cuenta creada! Inicia sesión')),
+        );
+        Navigator.pop(context);
+      } else if (response.statusCode == 400) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('El email ya está registrado')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al registrar')),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Credenciales incorrectas o servidor offline')),
+        const SnackBar(content: Text('No se pudo conectar al servidor')),
       );
     }
   }
@@ -41,27 +62,18 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A2E),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF16213E),
+        title: const Text('Crear cuenta', style: TextStyle(color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(32),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.shield, size: 72, color: Color(0xFF4FC3F7)),
-              const SizedBox(height: 16),
-              const Text(
-                'CitySafe',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const Text(
-                'Sistema de Monitoreo Urbano',
-                style: TextStyle(color: Colors.white54, fontSize: 14),
-              ),
-              const SizedBox(height: 40),
+              const Icon(Icons.person_add, size: 64, color: Color(0xFF4FC3F7)),
+              const SizedBox(height: 24),
               TextField(
                 controller: _emailController,
                 style: const TextStyle(color: Colors.white),
@@ -101,7 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: _isLoading
                     ? const Center(child: CircularProgressIndicator(color: Color(0xFF4FC3F7)))
                     : ElevatedButton(
-                        onPressed: _handleLogin,
+                        onPressed: _handleRegister,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4FC3F7),
                           foregroundColor: Colors.black,
@@ -109,20 +121,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text('Iniciar Sesión', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        child: const Text('Crear cuenta', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       ),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const RegisterScreen()),
-                  );
-                },
-                child: const Text(
-                  '¿No tienes cuenta? Regístrate',
-                  style: TextStyle(color: Color(0xFF4FC3F7)),
-                ),
               ),
             ],
           ),
