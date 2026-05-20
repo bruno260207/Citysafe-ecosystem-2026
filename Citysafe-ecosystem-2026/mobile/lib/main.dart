@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'screens/login_screen.dart';
+import 'screens/role_selection_screen.dart';
 import 'screens/home_page.dart';
+import 'screens/central_home_page.dart';
 import 'services/auth_service.dart';
 
 void main() => runApp(const CitySafeApp());
@@ -18,7 +19,7 @@ class CitySafeApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: FutureBuilder<String?>(
-        future: AuthService().getToken(),
+        future: AuthService().getRole(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
@@ -26,10 +27,10 @@ class CitySafeApp extends StatelessWidget {
               body: Center(child: CircularProgressIndicator(color: Color(0xFF4FC3F7))),
             );
           }
-          if (snapshot.hasData && snapshot.data != null) {
-            return const HomePage();
-          }
-          return const LoginScreen();
+          final role = snapshot.data;
+          if (role == null) return const RoleSelectionScreen();
+          if (role == 'central') return const CentralHomePage();
+          return const HomePage();
         },
       ),
     );

@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import 'home_page.dart';
-import 'register_screen.dart';
+import 'central_home_page.dart';
 import 'role_selection_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class CentralLoginScreen extends StatefulWidget {
+  const CentralLoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<CentralLoginScreen> createState() => _CentralLoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _CentralLoginScreenState extends State<CentralLoginScreen> {
   final _emailController = TextEditingController();
   final _passController = TextEditingController();
   bool _isLoading = false;
@@ -19,9 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _handleLogin() async {
     if (_emailController.text.isEmpty || _passController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Completa todos los campos')),
-      );
+      _showError('Completa todos los campos');
       return;
     }
     setState(() => _isLoading = true);
@@ -32,24 +29,23 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
     if (!mounted) return;
 
-    if (role == 'ciudadano') {
+    if (role == 'central') {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
+        MaterialPageRoute(builder: (_) => const CentralHomePage()),
         (route) => false,
       );
-    } else if (role == 'central') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Esta cuenta es de la Central. Usa el acceso correcto.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+    } else if (role == 'ciudadano') {
+      _showError('Esta cuenta no tiene acceso a la central.\nUsa el ingreso de Ciudadano.');
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Credenciales incorrectas o servidor offline')),
-      );
+      _showError('Credenciales incorrectas o servidor offline');
     }
+  }
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: Colors.red.shade700),
+    );
   }
 
   @override
@@ -73,19 +69,24 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.person, size: 72, color: Color(0xFF4FC3F7)),
-              const SizedBox(height: 16),
-              const Text(
-                'Ciudadano',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF6B6B).withOpacity(0.15),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFFF6B6B).withOpacity(0.4), width: 2),
                 ),
+                child: const Icon(Icons.radio_button_checked, size: 56, color: Color(0xFFFF6B6B)),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Central de Mando',
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white),
               ),
               const Text(
-                'Inicia sesion para reportar incidentes',
-                style: TextStyle(color: Colors.white54, fontSize: 13),
+                'Acceso restringido — Solo personal autorizado',
+                style: TextStyle(color: Colors.white38, fontSize: 13),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 40),
               TextField(
@@ -93,9 +94,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 keyboardType: TextInputType.emailAddress,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  labelText: 'Email',
+                  labelText: 'Email de la central',
                   labelStyle: const TextStyle(color: Colors.white54),
-                  prefixIcon: const Icon(Icons.email, color: Color(0xFF4FC3F7)),
+                  prefixIcon: const Icon(Icons.badge, color: Color(0xFFFF6B6B)),
                   filled: true,
                   fillColor: Colors.white10,
                   border: OutlineInputBorder(
@@ -110,9 +111,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 obscureText: _obscure,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  labelText: 'Contrasena',
+                  labelText: 'Contraseña',
                   labelStyle: const TextStyle(color: Colors.white54),
-                  prefixIcon: const Icon(Icons.lock, color: Color(0xFF4FC3F7)),
+                  prefixIcon: const Icon(Icons.lock, color: Color(0xFFFF6B6B)),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscure ? Icons.visibility_off : Icons.visibility,
@@ -128,38 +129,31 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 52,
                 child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(color: Color(0xFF4FC3F7)),
-                      )
-                    : ElevatedButton(
+                    ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B6B)))
+                    : ElevatedButton.icon(
                         onPressed: _handleLogin,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4FC3F7),
-                          foregroundColor: Colors.black,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text(
-                          'Iniciar Sesion',
+                        icon: const Icon(Icons.login),
+                        label: const Text(
+                          'Ingresar a la Central',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF6B6B),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
               ),
-              TextButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                ),
-                child: const Text(
-                  'No tienes cuenta? Registrate',
-                  style: TextStyle(color: Color(0xFF4FC3F7)),
-                ),
+              const SizedBox(height: 24),
+              const Text(
+                'Credenciales por defecto:\ncentral@citysafe.com / central123',
+                style: TextStyle(color: Colors.white24, fontSize: 12),
+                textAlign: TextAlign.center,
               ),
             ],
           ),

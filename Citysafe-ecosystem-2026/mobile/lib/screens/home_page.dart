@@ -5,6 +5,7 @@ import '../models/incident.dart';
 import 'login_screen.dart';
 import 'add_incident_screen.dart';
 import 'map_screen.dart';
+import 'role_selection_screen.dart'; // ← AGREGAR este import
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -60,7 +61,6 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         actions: [
-          // Dentro de actions en el AppBar, antes del IconButton de logout
           IconButton(
             icon: const Icon(Icons.map, color: Colors.white),
             onPressed: () {
@@ -70,14 +70,15 @@ class _HomePageState extends State<HomePage> {
               );
             },
           ),
-
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white54),
             onPressed: () async {
               await AuthService().logout();
+              if (!context.mounted) return;
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                // ↓ CAMBIO: ahora va a RoleSelectionScreen, no LoginScreen
+                MaterialPageRoute(builder: (context) => const RoleSelectionScreen()),
                 (route) => false,
               );
             },
@@ -103,9 +104,7 @@ class _HomePageState extends State<HomePage> {
               ),
             );
           }
-
           final incidents = snapshot.data!;
-
           if (incidents.isEmpty) {
             return const Center(
               child: Column(
@@ -118,7 +117,6 @@ class _HomePageState extends State<HomePage> {
               ),
             );
           }
-
           return RefreshIndicator(
             onRefresh: () async => _refresh(),
             child: ListView.builder(
