@@ -65,6 +65,7 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Cola SSE en memoria para notificar a la central en tiempo real
