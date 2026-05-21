@@ -30,23 +30,18 @@ class _AddIncidentScreenState extends State<AddIncidentScreen> {
   @override
   void initState() {
     super.initState();
-    // Obtener ubicación automáticamente al abrir la pantalla
     _obtenerUbicacion();
   }
 
   Future<void> _obtenerUbicacion() async {
     setState(() => _isLoadingLocation = true);
-
     try {
-      // Verificar si el servicio de ubicación está habilitado
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         _mostrarError('El GPS está desactivado. Actívalo o ingresa las coordenadas manualmente.');
         setState(() => _isLoadingLocation = false);
         return;
       }
-
-      // Verificar y solicitar permisos
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -56,18 +51,14 @@ class _AddIncidentScreenState extends State<AddIncidentScreen> {
           return;
         }
       }
-
       if (permission == LocationPermission.deniedForever) {
         _mostrarError('Permiso de ubicación bloqueado. Habilítalo en los ajustes del dispositivo.');
         setState(() => _isLoadingLocation = false);
         return;
       }
-
-      // Obtener posición actual
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-
       setState(() {
         _latController.text = position.latitude.toStringAsFixed(6);
         _lngController.text = position.longitude.toStringAsFixed(6);
@@ -82,11 +73,21 @@ class _AddIncidentScreenState extends State<AddIncidentScreen> {
   void _mostrarError(String mensaje) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensaje),
-        backgroundColor: Colors.red.shade700,
-      ),
+      SnackBar(content: Text(mensaje), backgroundColor: Colors.red.shade700),
     );
+  }
+
+  String _getMensajeEmergencia(String type) {
+    switch (type) {
+      case 'incendio':
+        return 'Mantén la calma, los bomberos ya se dirigen hacia tu zona.';
+      case 'salud':
+        return 'Mantén la calma, la ambulancia ya se dirige hacia tu zona.';
+      case 'accidente':
+        return 'Mantén la calma, la policía y una ambulancia ya se dirigen hacia tu zona.';
+      default:
+        return 'Mantén la calma, la policía ya se dirige hacia tu zona.';
+    }
   }
 
   void _guardar() async {
@@ -110,12 +111,46 @@ class _AddIncidentScreenState extends State<AddIncidentScreen> {
     setState(() => _isLoading = false);
 
     if (success) {
-      Navigator.pop(context, true);
+      await _mostrarNotificacionEmergencia(_selectedType);
+      if (mounted) Navigator.pop(context, true);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error al reportar, verificar datos.')),
       );
     }
+  }
+
+  Future<void> _mostrarNotificacionEmergencia(String type) async {
+    final mensaje = _getMensajeEmergencia(type);
+
+    final iconData = switch (type) {
+      'incendio'   => Icons.local_fire_department,
+      'salud'      => Icons.medical_services,
+      'accidente'  => Icons.car_crash,
+      'robo'       => Icons.shield,
+      'sospechoso' => Icons.visibility,
+      _            => Icons.shield,
+    };
+
+    final color = switch (type) {
+      'incendio'  => const Color(0xFFFF6B35),  // naranja fuego
+      'salud'     => const Color(0xFF4CAF50),  // verde
+      'accidente' => const Color(0xFFFFB300),  // ámbar
+      'robo'      => const Color(0xFFE53935),  // rojo
+      'sospechoso'=> const Color(0xFFAB47BC),  // morado
+      _           => const Color(0xFF26C6DA),  // cyan (otros)
+    };
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black87,
+      builder: (_) => _EmergencyDialog(
+        mensaje: mensaje,
+        icon: iconData,
+        color: color,
+      ),
+    );
   }
 
   @override
@@ -175,8 +210,6 @@ class _AddIncidentScreenState extends State<AddIncidentScreen> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // — SECCIÓN UBICACIÓN —
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -246,7 +279,6 @@ class _AddIncidentScreenState extends State<AddIncidentScreen> {
               ],
             ),
             const SizedBox(height: 20),
-
             const Text('Nivel de urgencia', style: TextStyle(color: Colors.white70, fontSize: 13)),
             const SizedBox(height: 8),
             Row(
@@ -289,6 +321,128 @@ class _AddIncidentScreenState extends State<AddIncidentScreen> {
                     ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmergencyDialog extends StatefulWidget {
+  final String mensaje;
+  final IconData icon;
+  final Color color;
+
+  const _EmergencyDialog({
+    required this.mensaje,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  State<_EmergencyDialog> createState() => _EmergencyDialogState();
+}
+
+class _EmergencyDialogState extends State<_EmergencyDialog>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnim;
+  late Animation<double> _fadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _scaleAnim = CurvedAnimation(parent: _controller, curve: Curves.elasticOut);
+    _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        child: ScaleTransition(
+          scale: _scaleAnim,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 28),
+            decoration: BoxDecoration(
+              color: const Color(0xFF16213E),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: widget.color.withOpacity(0.5), width: 2),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.9, end: 1.1),
+                  duration: const Duration(milliseconds: 800),
+                  curve: Curves.easeInOut,
+                  builder: (_, scale, child) => Transform.scale(scale: scale, child: child),
+                  onEnd: () => setState(() {}),
+                  child: Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: widget.color.withOpacity(0.15),
+                      border: Border.all(color: widget.color, width: 2.5),
+                    ),
+                    child: Icon(widget.icon, size: 44, color: widget.color),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  '¡Reporte enviado!',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  widget.mensaje,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: widget.color,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: widget.color,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: const Text(
+                      'Entendido',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
