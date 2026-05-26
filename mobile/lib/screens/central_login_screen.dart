@@ -150,11 +150,6 @@ class _CentralLoginScreenState extends State<CentralLoginScreen> {
                       ),
               ),
               const SizedBox(height: 24),
-              const Text(
-                'Credenciales por defecto:\ncentral@citysafe.com / central123',
-                style: TextStyle(color: Colors.white24, fontSize: 12),
-                textAlign: TextAlign.center,
-              ),
             ],
           ),
         ),
