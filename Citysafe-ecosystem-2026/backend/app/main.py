@@ -92,7 +92,7 @@ async def _broadcast_incident(incident):
 def startup_event():
     db = next(get_db())
     try:
-        crud.seed_admin(db)
+        crud.seed_iot(db)
     finally:
         db.close()
 

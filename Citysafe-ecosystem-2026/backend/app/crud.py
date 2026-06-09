@@ -19,13 +19,13 @@ def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
 
 
-def seed_admin(db: Session):
-    """Crea el usuario administrador de la central si no existe."""
-    admin_email = "central@citysafe.com"
-    existing = get_user_by_email(db, admin_email)
+def seed_iot(db: Session):
+    """Crea el usuario IoT si no existe."""
+    iot_email = "iot@citysafe.com"
+    existing = get_user_by_email(db, iot_email)
     if not existing:
-        create_user(db, email=admin_email, password="central123", role="central")
-        print("Admin de central creado: central@citysafe.com / central123")
+        create_user(db, email=iot_email, password="iot123", role="ciudadano")
+        print("Usuario IoT creado: iot@citysafe.com / iot123")
 
 
 def create_incident(db: Session, incident_data, user_id: int):
