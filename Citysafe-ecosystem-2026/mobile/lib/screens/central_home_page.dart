@@ -70,7 +70,7 @@ class _CentralHomePageState extends State<CentralHomePage>
     }
   }
 
-  // ── SSE (notificaciones en tiempo real) ────────────────────────────────────
+  // ── SSE ────────────────────────────────────────────────────────────────────
 
   Future<void> _connectSSE() async {
     final sub = await ApiService().listenToIncidentStream(
@@ -85,7 +85,7 @@ class _CentralHomePageState extends State<CentralHomePage>
       },
       onError: (_) {},
     );
-    _sseSubscription = sub; 
+    _sseSubscription = sub;
   }
 
   void _startToastTimer() {
@@ -114,7 +114,7 @@ class _CentralHomePageState extends State<CentralHomePage>
     }
   }
 
-  // ── HELPERS DE COLOR ───────────────────────────────────────────────────────
+  // ── HELPERS ────────────────────────────────────────────────────────────────
 
   Color _urgencyColor(int u) {
     if (u <= 2) return Colors.green;
@@ -124,35 +124,25 @@ class _CentralHomePageState extends State<CentralHomePage>
 
   Color _statusColor(String s) {
     switch (s) {
-      case 'pendiente':
-        return Colors.orange;
-      case 'atendido':
-        return Colors.blue;
-      case 'resuelto':
-        return Colors.green;
-      default:
-        return Colors.grey;
+      case 'pendiente': return Colors.orange;
+      case 'atendido':  return Colors.blue;
+      case 'resuelto':  return Colors.green;
+      default:          return Colors.grey;
     }
   }
 
   IconData _typeIcon(String type) {
     switch (type) {
-      case 'robo':
-        return Icons.money_off;
-      case 'incendio':
-        return Icons.local_fire_department;
-      case 'salud':
-        return Icons.medical_services;
-      case 'sospechoso':
-        return Icons.visibility;
-      case 'accidente':
-        return Icons.car_crash;
-      default:
-        return Icons.warning;
+      case 'robo':      return Icons.money_off;
+      case 'incendio':  return Icons.local_fire_department;
+      case 'salud':     return Icons.medical_services;
+      case 'sospechoso':return Icons.visibility;
+      case 'accidente': return Icons.car_crash;
+      default:          return Icons.warning;
     }
   }
 
-  // ── MODAL DE DETALLE ───────────────────────────────────────────────────────
+  // ── MODAL DETALLE ──────────────────────────────────────────────────────────
 
   void _showDetail(Incident inc) {
     showModalBottomSheet(
@@ -174,9 +164,7 @@ class _CentralHomePageState extends State<CentralHomePage>
                 Text(
                   inc.type.toUpperCase(),
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                    color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold,
                   ),
                 ),
                 const Spacer(),
@@ -190,8 +178,7 @@ class _CentralHomePageState extends State<CentralHomePage>
                     inc.status.toUpperCase(),
                     style: TextStyle(
                       color: _statusColor(inc.status),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                      fontWeight: FontWeight.bold, fontSize: 12,
                     ),
                   ),
                 ),
@@ -205,8 +192,7 @@ class _CentralHomePageState extends State<CentralHomePage>
             _detailRow(Icons.location_on, '${inc.latitude.toStringAsFixed(5)}, ${inc.longitude.toStringAsFixed(5)}'),
             _detailRow(Icons.access_time, inc.createdAt.toLocal().toString().substring(0, 16)),
             _detailRow(Icons.warning_amber, 'Urgencia: ${inc.urgency}/5'),
-            if (inc.reporterEmail != null)
-              _detailRow(Icons.person, inc.reporterEmail!),
+            if (inc.reporterEmail != null) _detailRow(Icons.person, inc.reporterEmail!),
             const SizedBox(height: 20),
             if (inc.status == 'pendiente')
               _statusButton('Marcar como Atendido', Colors.blue, () {
@@ -227,10 +213,7 @@ class _CentralHomePageState extends State<CentralHomePage>
                   color: Colors.green.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
-                  '✓ Incidente resuelto',
-                  style: TextStyle(color: Colors.green),
-                ),
+                child: const Text('✓ Incidente resuelto', style: TextStyle(color: Colors.green)),
               ),
           ],
         ),
@@ -245,9 +228,7 @@ class _CentralHomePageState extends State<CentralHomePage>
         children: [
           Icon(icon, color: Colors.white38, size: 16),
           const SizedBox(width: 8),
-          Expanded(
-            child: Text(text, style: const TextStyle(color: Colors.white60, fontSize: 13)),
-          ),
+          Expanded(child: Text(text, style: const TextStyle(color: Colors.white60, fontSize: 13))),
         ],
       ),
     );
@@ -336,13 +317,11 @@ class _CentralHomePageState extends State<CentralHomePage>
     );
   }
 
-  // ── LISTA ──────────────────────────────────────────────────────────────────
+  // ── LISTA CON SUB-TABS ─────────────────────────────────────────────────────
 
   Widget _buildList() {
     if (_loading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xFFFF6B6B)),
-      );
+      return const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B6B)));
     }
     if (_error != null) {
       return Center(
@@ -358,14 +337,83 @@ class _CentralHomePageState extends State<CentralHomePage>
         ),
       );
     }
-    if (_incidents.isEmpty) {
-      return const Center(
+
+    final pendientes = _incidents.where((i) => i.status == 'pendiente').toList();
+    final atendidos  = _incidents.where((i) => i.status == 'atendido').toList();
+    final resueltos  = _incidents.where((i) => i.status == 'resuelto').toList();
+
+    return DefaultTabController(
+      length: 3,
+      child: Column(
+        children: [
+          // Sub-TabBar
+          Container(
+            color: const Color(0xFF16213E),
+            child: TabBar(
+              indicatorColor: Colors.white,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white38,
+              indicatorSize: TabBarIndicatorSize.tab,
+              tabs: [
+                _subTab('Pendiente', pendientes.length, Colors.orange),
+                _subTab('Atendido',  atendidos.length,  Colors.blue),
+                _subTab('Resuelto',  resueltos.length,  Colors.green),
+              ],
+            ),
+          ),
+          // Sub-TabBarView
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildStatusList(pendientes, 'pendiente'),
+                _buildStatusList(atendidos,  'atendido'),
+                _buildStatusList(resueltos,  'resuelto'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Tab _subTab(String label, int count, Color color) {
+    return Tab(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text('$label ($count)', style: const TextStyle(fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusList(List<Incident> incidents, String status) {
+    if (incidents.isEmpty) {
+      final messages = {
+        'pendiente': ('check_circle', Colors.green,   'Sin incidentes pendientes'),
+        'atendido':  ('hourglass_empty', Colors.blue, 'Ningún incidente en atención'),
+        'resuelto':  ('emoji_events', Colors.amber,   'Aún no hay incidentes resueltos'),
+      };
+      final info = messages[status]!;
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.check_circle, color: Colors.green, size: 64),
-            SizedBox(height: 16),
-            Text('Sin incidentes activos', style: TextStyle(color: Colors.white)),
+            Icon(
+              status == 'pendiente' ? Icons.check_circle
+                  : status == 'atendido' ? Icons.hourglass_empty
+                  : Icons.emoji_events,
+              color: info.$2,
+              size: 56,
+            ),
+            const SizedBox(height: 16),
+            Text(info.$3, style: const TextStyle(color: Colors.white54)),
           ],
         ),
       );
@@ -376,9 +424,9 @@ class _CentralHomePageState extends State<CentralHomePage>
       color: const Color(0xFFFF6B6B),
       child: ListView.builder(
         padding: const EdgeInsets.all(12),
-        itemCount: _incidents.length,
+        itemCount: incidents.length,
         itemBuilder: (context, index) {
-          final inc = _incidents[index];
+          final inc = incidents[index];
           return _IncidentCard(
             incident: inc,
             urgencyColor: _urgencyColor(inc.urgency),
@@ -405,12 +453,10 @@ class _CentralHomePageState extends State<CentralHomePage>
 
     final center = validIncidents.isNotEmpty
         ? LatLng(
-            validIncidents.map((i) => i.latitude).reduce((a, b) => a + b) /
-                validIncidents.length,
-            validIncidents.map((i) => i.longitude).reduce((a, b) => a + b) /
-                validIncidents.length,
+            validIncidents.map((i) => i.latitude).reduce((a, b) => a + b) / validIncidents.length,
+            validIncidents.map((i) => i.longitude).reduce((a, b) => a + b) / validIncidents.length,
           )
-        : const LatLng(-12.0464, -77.0428); // Lima por defecto
+        : const LatLng(-12.0464, -77.0428);
 
     return FlutterMap(
       options: MapOptions(initialCenter: center, initialZoom: 13),
@@ -449,7 +495,7 @@ class _CentralHomePageState extends State<CentralHomePage>
     );
   }
 
-  // ── TOAST NOTIFICACIÓN ─────────────────────────────────────────────────────
+  // ── TOAST ──────────────────────────────────────────────────────────────────
 
   Widget _buildToast(Incident inc) {
     return Positioned(
@@ -504,7 +550,7 @@ class _CentralHomePageState extends State<CentralHomePage>
   }
 }
 
-// ── WIDGET TARJETA ────────────────────────────────────────────────────────────
+// ── WIDGET TARJETA ─────────────────────────────────────────────────────────────
 
 class _IncidentCard extends StatelessWidget {
   final Incident incident;
@@ -554,9 +600,7 @@ class _IncidentCard extends StatelessWidget {
                         Text(
                           incident.type.toUpperCase(),
                           style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
+                            color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15,
                           ),
                         ),
                         if (incident.reporterEmail != null)
@@ -576,9 +620,7 @@ class _IncidentCard extends StatelessWidget {
                     child: Text(
                       'U${incident.urgency}',
                       style: TextStyle(
-                        color: urgencyColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                        color: urgencyColor, fontWeight: FontWeight.bold, fontSize: 12,
                       ),
                     ),
                   ),
@@ -606,9 +648,7 @@ class _IncidentCard extends StatelessWidget {
                     child: Text(
                       incident.status.toUpperCase(),
                       style: TextStyle(
-                        color: statusColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
+                        color: statusColor, fontWeight: FontWeight.bold, fontSize: 11,
                       ),
                     ),
                   ),

@@ -26,7 +26,11 @@ def seed_iot(db: Session):
     if not existing:
         create_user(db, email=iot_email, password="iot123", role="ciudadano")
         print("Usuario IoT creado: iot@citysafe.com / iot123")
-
+    
+    """Crea el usuario central"""
+    if not get_user_by_email(db, "central@citysafe.com"):
+        create_user(db, email="central@citysafe.com", password="central123", role="central")
+        print("Usuario central creado: central@citysafe.com / central123")
 
 def create_incident(db: Session, incident_data, user_id: int):
     incident = Incident(
