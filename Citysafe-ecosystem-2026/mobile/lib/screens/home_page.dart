@@ -5,6 +5,8 @@ import '../models/incident.dart';
 import 'add_incident_screen.dart';
 import 'map_screen.dart';
 import 'role_selection_screen.dart'; 
+import '../services/location_service.dart';
+
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,6 +22,9 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     futureIncidents = ApiService().fetchIncidents();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+    _checkDangerZone();
+  });
   }
 
   void _refresh() {
@@ -27,6 +32,36 @@ class _HomePageState extends State<HomePage> {
       futureIncidents = ApiService().fetchIncidents();
     });
   }
+
+  Future<void> _checkDangerZone() async {
+  final locationService = LocationService();
+
+  final position =
+      await locationService.getSavedPosition();
+
+  if (position == null) return;
+
+  final incidents =
+      await ApiService().fetchIncidents();
+
+  final danger =
+      locationService.isInsideDangerZone(
+        userLat: position.lat,
+        userLng: position.lng,
+        incidents: incidents,
+      );
+
+  if (danger && mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          '⚠️ Te encuentras en una zona peligrosa',
+        ),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
 
   Color _urgencyColor(int urgency) {
     if (urgency <= 2) return Colors.green;

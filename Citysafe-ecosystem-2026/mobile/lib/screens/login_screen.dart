@@ -3,6 +3,7 @@ import '../services/auth_service.dart';
 import 'home_page.dart';
 import 'register_screen.dart';
 import 'role_selection_screen.dart';
+import '../services/location_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -33,12 +34,28 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (role == 'ciudadano') {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
-        (route) => false,
-      );
-    } else if (role == 'central') {
+  try {
+    final locationService = LocationService();
+
+    final position =
+        await locationService.requestAndGetPosition();
+
+    await locationService.savePosition(position);
+
+    if (!mounted) return;
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const HomePage()),
+      (route) => false,
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.toString())),
+    );
+  }
+}
+    else if (role == 'central') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Esta cuenta es de la Central. Usa el acceso correcto.'),

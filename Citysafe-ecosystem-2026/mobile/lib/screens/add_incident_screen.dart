@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/api_service.dart';
+import '../services/location_service.dart';
 
 class AddIncidentScreen extends StatefulWidget {
   const AddIncidentScreen({super.key});
@@ -30,7 +31,8 @@ class _AddIncidentScreenState extends State<AddIncidentScreen> {
   @override
   void initState() {
     super.initState();
-    _obtenerUbicacion();
+// obtenerUbicacion();
+    _cargarUbicacionGuardada();
   }
 
   Future<void> _obtenerUbicacion() async {
@@ -69,6 +71,22 @@ class _AddIncidentScreenState extends State<AddIncidentScreen> {
       setState(() => _isLoadingLocation = false);
     }
   }
+  Future<void> _cargarUbicacionGuardada() async {
+  final locationService = LocationService();
+
+  final pos =
+      await locationService.getSavedPosition();
+
+  if (pos == null) return;
+
+  setState(() {
+    _latController.text =
+        pos.lat.toStringAsFixed(6);
+
+    _lngController.text =
+        pos.lng.toStringAsFixed(6);
+  });
+}
 
   void _mostrarError(String mensaje) {
     if (!mounted) return;
@@ -351,6 +369,7 @@ class _EmergencyDialogState extends State<_EmergencyDialog>
   @override
   void initState() {
     super.initState();
+    
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
