@@ -10,7 +10,7 @@ from datetime import datetime
 BASE_URL = "http://localhost:8000"
 IOT_EMAIL = "iot@citysafe.com"
 IOT_PASSWORD = "iot123"
-BROKER = "broker.hivemq.com"
+BROKER = "test.mosquitto.org"
 PORT = 1883
 mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 mqtt_client.connect(BROKER, PORT)
@@ -19,10 +19,13 @@ mqtt_client.connect(BROKER, PORT)
 
 DISPOSITIVOS = [
     {"id": "CAM-001", "nombre": "Cámara Plaza Mayor",      "lat": -12.0464, "lng": -77.0428},
-    {"id": "CAM-002", "nombre": "Cámara Miraflores",       "lat": -18.1190, "lng": -77.0282},
+    {"id": "CAM-002", "nombre": "Cámara Miraflores",       "lat": -12.1190, "lng": -77.0282},
     {"id": "CAM-003", "nombre": "Cámara San Isidro",       "lat": -12.0971, "lng": -77.0331},
+    {"id": "CAM-004", "nombre": "Cámara San Miguel",       "lat": -12.0780, "lng": -77.0819},
     {"id": "POST-001","nombre": "Poste San Borja",          "lat": -12.1028, "lng": -77.0013},
     {"id": "POST-002","nombre": "Poste Surquillo",          "lat": -12.1100, "lng": -77.0200},
+    {"id": "POST-003","nombre": "Poste Plaza Norte",          "lat": -12.0072, "lng": -77.0609},
+    {"id": "POST-004","nombre": "Poste San Martin",          "lat": -12.0285, "lng": -77.0875},
 ]
 
 # Tipos de incidentes que puede detectar un dispositivo IoT
@@ -73,7 +76,7 @@ def reportar_incidente_mqtt(dispositivo: dict, tipo: str, urgencia: int) -> bool
 
 # ── MODO 1: SIMULACIÓN CONTINUA ────────────────────────────────────────────────
 
-def modo_continuo(token:str, intervalo: int = 10):
+def modo_continuo(token:str, intervalo: int = 5):
     """
     Simula dispositivos reportando incidentes aleatoriamente
     cada X segundos de forma indefinida.
@@ -143,7 +146,7 @@ def main():
     
     # Menú
     print("\n¿Qué modo deseas ejecutar?")
-    print("  [1] Simulación continua (reporte cada 10 segundos)")
+    print("  [1] Simulación continua (reporte cada 5 segundos)")
     print("  [2] Activación masiva (10 incidentes de golpe)")
     print("  [3] Activación masiva personalizada")
     print("  [4] Salir")
@@ -151,7 +154,7 @@ def main():
     opcion = input("\nOpción: ").strip()
     
     if opcion == "1":
-        modo_continuo(token, intervalo=10)
+        modo_continuo(token, intervalo=5)
     
     elif opcion == "2":
         modo_masivo(token, cantidad=10)

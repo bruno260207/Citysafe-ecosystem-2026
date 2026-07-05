@@ -6,7 +6,7 @@ import threading
 
 # ── CONFIGURACIÓN ──────────────────────────────────────────────────────────────
 
-BROKER = "broker.hivemq.com"
+BROKER = "test.mosquitto.org"
 PORT = 1883
 TOPIC = "citysafe/incidentes/#"
 BASE_URL = "http://localhost:8000"
