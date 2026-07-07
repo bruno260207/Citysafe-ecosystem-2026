@@ -1,0 +1,31 @@
+services:
+  # Servicio 1: El Servidor API
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - citysafe_sqlite_data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:////app/data/citysafe.db
+    # LE AÑADIMOS EL CONTROL DE SALUD (HEALTHCHECK) REQUERIDO EN EL RETO
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  # Servicio 2: El traductor de protocolos IoT
+  mqtt_bridge:
+    build: ./iot_industrial
+    # MODIFICAMOS EL DEPENDS_ON PARA QUE ESPERE A QUE EL BACKEND ESTÉ SALUDABLE
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      # CAMBIAMOS 'localhost' POR 'backend' COMO DICE LA GUÍA
+      - API_URL=http://backend:8000/
+      - JWT_TOKEN=tu_token_jwt_aqui
+
+volumes:
+  citysafe_sqlite_data:
