@@ -3,13 +3,13 @@ import requests
 import json
 import time
 import threading
-
+import os
 # ── CONFIGURACIÓN ──────────────────────────────────────────────────────────────
 
 BROKER = "test.mosquitto.org"
 PORT = 1883
 TOPIC = "citysafe/incidentes/#"
-BASE_URL = "http://localhost:8000"
+BASE_URL = os.environ.get("API_URL", "http://backend:8000/")
 IOT_EMAIL = "iot@citysafe.com"
 IOT_PASSWORD = "iot123"
 

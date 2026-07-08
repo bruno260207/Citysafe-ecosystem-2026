@@ -1,6 +1,6 @@
 # 1. Imagen base ligera de Python
 FROM python:3.11-slim
-
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 # 2. Definir el directorio de trabajo dentro del contenedor
 WORKDIR /app
 
