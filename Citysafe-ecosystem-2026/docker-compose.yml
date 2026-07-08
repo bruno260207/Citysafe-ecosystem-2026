@@ -24,7 +24,7 @@ services:
         condition: service_healthy
     environment:
       # CAMBIAMOS 'localhost' POR 'backend' COMO DICE LA GUÍA
-      - API_URL=http://backend:8000/
+      - API_URL=http://backend:8000
       - JWT_TOKEN=tu_token_jwt_aqui
 
 volumes:
