@@ -1,0 +1,45 @@
+[gd_scene load_steps=4 format=3 uid="uid://cysuwqv350hcm"]
+
+[ext_resource type="Texture2D" uid="uid://cbg1iulldek2c" path="res://Imagenes/Mapa_Vial_Metropolitana_de_Lima.png" id="1_hnloe"]
+[ext_resource type="Script" uid="uid://dk75cuxpj75t6" path="res://Mapa/mapa_dashboard.gd" id="1_mvru3"]
+[ext_resource type="Script" uid="uid://bflj1nollnrs7" path="res://Mapa/camera_2d.gd" id="2_vq0kd"]
+
+[node name="Mapa" type="Node2D"]
+script = ExtResource("1_mvru3")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("1_hnloe")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+limit_left = -779
+limit_top = -783
+limit_right = 779
+limit_bottom = 783
+script = ExtResource("2_vq0kd")
+
+[node name="Marcadores" type="Node2D" parent="."]
+position = Vector2(-225, -53)
+
+[node name="CAM-001" type="Marker2D" parent="Marcadores"]
+position = Vector2(109, -175)
+
+[node name="CAM-002" type="Marker2D" parent="Marcadores"]
+position = Vector2(190, 216)
+
+[node name="CAM-003" type="Marker2D" parent="Marcadores"]
+position = Vector2(154, 103)
+
+[node name="CAM-004" type="Marker2D" parent="Marcadores"]
+position = Vector2(-123, -27)
+
+[node name="POST-001" type="Marker2D" parent="Marcadores"]
+position = Vector2(326, 130)
+
+[node name="POST-002" type="Marker2D" parent="Marcadores"]
+position = Vector2(225, 166)
+
+[node name="POST-003" type="Marker2D" parent="Marcadores"]
+position = Vector2(8, -427)
+
+[node name="POST-004" type="Marker2D" parent="Marcadores"]
+position = Vector2(-138, -271)

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://uh3oeeduxvxn"]
+
+[ext_resource type="Script" uid="uid://s10e2eo1ojox" path="res://Mancha_De_Calor/mancha_de_calor.gd" id="1_n81ui"]
+
+[node name="mancha_de_calor" type="Node2D"]
+script = ExtResource("1_n81ui")
