@@ -163,8 +163,10 @@ python station_sim.py
 
 ### 5. Simulación 3D (Godot)
 1. Descarga Godot Engine 4.x desde https://godotengine.org/download
-2. Abre Godot → Import → selecciona la carpeta `simulation_godot/`
-3. Presiona el botón Play (F5)
+2. Abre Godot → Import → selecciona la carpeta `simulation_godot/
+3. Importante primero correr el backend y el simulador IoT
+4. Presiona el botón Play
+5. Esperar que se conecte con el MQTT
 
 ### Resumen de terminales
 
