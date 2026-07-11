@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -28,6 +27,37 @@ class _CentralHomePageState extends State<CentralHomePage>
   Incident? _toastIncident;
   Timer? _toastTimer;
 
+  // ── FILTROS ────────────────────────────────────────────────────────────────
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  final Set<String> _selectedTypes = {}; // vacío = todos los tipos
+  int _minUrgency = 1;
+  String _sortBy = 'recientes'; // recientes | urgencia_desc | urgencia_asc
+
+  static const Map<String, String> _typeLabels = {
+    'robo': 'Robo',
+    'incendio': 'Incendio',
+    'salud': 'Salud',
+    'sospechoso': 'Sospechoso',
+    'accidente': 'Accidente',
+    'otros': 'Otros',
+  };
+
+  bool get _hasActiveFilters =>
+      _searchQuery.isNotEmpty ||
+      _selectedTypes.isNotEmpty ||
+      _minUrgency > 1 ||
+      _sortBy != 'recientes';
+
+  int get _activeFilterCount {
+    var count = 0;
+    if (_searchQuery.isNotEmpty) count++;
+    if (_selectedTypes.isNotEmpty) count++;
+    if (_minUrgency > 1) count++;
+    if (_sortBy != 'recientes') count++;
+    return count;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -41,6 +71,7 @@ class _CentralHomePageState extends State<CentralHomePage>
     _tabController.dispose();
     _sseSubscription?.cancel();
     _toastTimer?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -113,6 +144,339 @@ class _CentralHomePageState extends State<CentralHomePage>
         const SnackBar(content: Text('Error al actualizar el estado')),
       );
     }
+  }
+
+  Future<void> _confirmAndChangeStatus(Incident inc, String newStatus, String actionLabel) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF16213E),
+        title: const Text('Confirmar acción', style: TextStyle(color: Colors.white)),
+        content: Text(
+          '¿Marcar el incidente de ${inc.type.toUpperCase()} '
+          '(urgencia ${inc.urgency}/5) como "$actionLabel"?',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF6B6B)),
+            child: const Text('Confirmar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _changeStatus(inc, newStatus);
+    }
+  }
+
+  // ── FILTRADO Y ORDEN ───────────────────────────────────────────────────────
+
+  List<Incident> _applyFilters(List<Incident> source) {
+    var result = source.where((inc) {
+      if (_selectedTypes.isNotEmpty && !_selectedTypes.contains(inc.type)) {
+        return false;
+      }
+      if (inc.urgency < _minUrgency) return false;
+      if (_searchQuery.isNotEmpty) {
+        final q = _searchQuery.toLowerCase();
+        final matches = inc.type.toLowerCase().contains(q) ||
+            (inc.description?.toLowerCase().contains(q) ?? false) ||
+            (inc.reporterEmail?.toLowerCase().contains(q) ?? false);
+        if (!matches) return false;
+      }
+      return true;
+    }).toList();
+
+    switch (_sortBy) {
+      case 'urgencia_desc':
+        result.sort((a, b) => b.urgency.compareTo(a.urgency));
+        break;
+      case 'urgencia_asc':
+        result.sort((a, b) => a.urgency.compareTo(b.urgency));
+        break;
+      case 'recientes':
+      default:
+        result.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+    }
+    return result;
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _searchController.clear();
+      _searchQuery = '';
+      _selectedTypes.clear();
+      _minUrgency = 1;
+      _sortBy = 'recientes';
+    });
+  }
+
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF16213E),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            Widget sortOption(String value, String label, IconData icon) {
+              final selected = _sortBy == value;
+              return ListTile(
+                leading: Icon(icon, color: selected ? const Color(0xFFFF6B6B) : Colors.white54),
+                title: Text(
+                  label,
+                  style: TextStyle(
+                    color: selected ? const Color(0xFFFF6B6B) : Colors.white,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+                trailing: selected ? const Icon(Icons.check, color: Color(0xFFFF6B6B)) : null,
+                onTap: () {
+                  setSheetState(() => _sortBy = value);
+                  setState(() {});
+                },
+              );
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20, right: 20, top: 16,
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        const Text(
+                          'Filtros y orden',
+                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () {
+                            setSheetState(() {
+                              _selectedTypes.clear();
+                              _minUrgency = 1;
+                              _sortBy = 'recientes';
+                            });
+                            setState(() {});
+                          },
+                          child: const Text('Limpiar', style: TextStyle(color: Colors.white54)),
+                        ),
+                      ],
+                    ),
+                    const Divider(color: Colors.white12, height: 24),
+
+                    // Ordenar
+                    const Text('Ordenar', style: TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.bold)),
+                    sortOption('recientes', 'Más recientes', Icons.schedule),
+                    sortOption('urgencia_desc', 'Mayor urgencia', Icons.priority_high),
+                    sortOption('urgencia_asc', 'Menor urgencia', Icons.low_priority),
+
+                    const Divider(color: Colors.white12, height: 24),
+
+                    // Tipo de incidente
+                    const Text('Tipo de incidente', style: TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _typeLabels.entries.map((entry) {
+                        final selected = _selectedTypes.contains(entry.key);
+                        return FilterChip(
+                          label: Text(entry.value),
+                          selected: selected,
+                          showCheckmark: false,
+                          labelStyle: TextStyle(
+                            color: selected ? Colors.white : Colors.white70,
+                            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 12,
+                          ),
+                          backgroundColor: const Color(0xFF1A1A2E),
+                          selectedColor: const Color(0xFFFF6B6B),
+                          side: BorderSide(color: selected ? Colors.transparent : Colors.white24),
+                          onSelected: (value) {
+                            setSheetState(() {
+                              if (value) {
+                                _selectedTypes.add(entry.key);
+                              } else {
+                                _selectedTypes.remove(entry.key);
+                              }
+                            });
+                            setState(() {});
+                          },
+                        );
+                      }).toList(),
+                    ),
+
+                    const Divider(color: Colors.white12, height: 24),
+
+                    // Urgencia mínima
+                    Row(
+                      children: [
+                        const Text('Urgencia mínima', style: TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.bold)),
+                        const Spacer(),
+                        Text('$_minUrgency/5', style: const TextStyle(color: Color(0xFFFF6B6B), fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    Slider(
+                      value: _minUrgency.toDouble(),
+                      min: 1,
+                      max: 5,
+                      divisions: 4,
+                      activeColor: const Color(0xFFFF6B6B),
+                      inactiveColor: Colors.white12,
+                      label: '$_minUrgency',
+                      onChanged: (value) {
+                        setSheetState(() => _minUrgency = value.round());
+                        setState(() {});
+                      },
+                    ),
+
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(sheetContext),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF6B6B),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text('Aplicar', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterBar() {
+    return Container(
+      color: const Color(0xFF16213E),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 40,
+              child: TextField(
+                controller: _searchController,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Buscar por tipo, descripción o correo...',
+                  hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                  prefixIcon: const Icon(Icons.search, color: Colors.white38, size: 20),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: Colors.white38, size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: const Color(0xFF1A1A2E),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                onChanged: (value) => setState(() => _searchQuery = value),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Material(
+                color: _hasActiveFilters ? const Color(0xFFFF6B6B) : const Color(0xFF16213E),
+                borderRadius: BorderRadius.circular(10),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: _showFilterSheet,
+                  child: Container(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _hasActiveFilters ? Colors.transparent : const Color(0xFFFF6B6B),
+                        width: 1.4,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.tune,
+                          color: _hasActiveFilters ? Colors.white : const Color(0xFFFF6B6B),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Filtrar',
+                          style: TextStyle(
+                            color: _hasActiveFilters ? Colors.white : const Color(0xFFFF6B6B),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              if (_activeFilterCount > 0)
+                Positioned(
+                  top: -6,
+                  right: -6,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                    child: Text(
+                      '$_activeFilterCount',
+                      style: const TextStyle(color: Color(0xFFFF6B6B), fontSize: 9, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (_hasActiveFilters) ...[
+            const SizedBox(width: 6),
+            IconButton(
+              icon: const Icon(Icons.filter_alt_off, color: Colors.white38, size: 20),
+              tooltip: 'Limpiar filtros',
+              onPressed: _clearFilters,
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   // ── HELPERS ────────────────────────────────────────────────────────────────
@@ -198,12 +562,12 @@ class _CentralHomePageState extends State<CentralHomePage>
             if (inc.status == 'pendiente')
               _statusButton('Marcar como Atendido', Colors.blue, () {
                 Navigator.pop(context);
-                _changeStatus(inc, 'atendido');
+                _confirmAndChangeStatus(inc, 'atendido', 'Atendido');
               }),
             if (inc.status == 'atendido')
               _statusButton('Marcar como Resuelto', Colors.green, () {
                 Navigator.pop(context);
-                _changeStatus(inc, 'resuelto');
+                _confirmAndChangeStatus(inc, 'resuelto', 'Resuelto');
               }),
             if (inc.status == 'resuelto')
               Container(
@@ -339,14 +703,15 @@ class _CentralHomePageState extends State<CentralHomePage>
       );
     }
 
-    final pendientes = _incidents.where((i) => i.status == 'pendiente').toList();
-    final atendidos  = _incidents.where((i) => i.status == 'atendido').toList();
-    final resueltos  = _incidents.where((i) => i.status == 'resuelto').toList();
+    final pendientes = _applyFilters(_incidents.where((i) => i.status == 'pendiente').toList());
+    final atendidos  = _applyFilters(_incidents.where((i) => i.status == 'atendido').toList());
+    final resueltos  = _applyFilters(_incidents.where((i) => i.status == 'resuelto').toList());
 
     return DefaultTabController(
       length: 3,
       child: Column(
         children: [
+          _buildFilterBar(),
           // Sub-TabBar
           Container(
             color: const Color(0xFF16213E),
@@ -396,6 +761,24 @@ class _CentralHomePageState extends State<CentralHomePage>
 
   Widget _buildStatusList(List<Incident> incidents, String status) {
     if (incidents.isEmpty) {
+      if (_hasActiveFilters) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.search_off, color: Colors.white24, size: 56),
+              const SizedBox(height: 16),
+              const Text('Ningún incidente coincide con los filtros', style: TextStyle(color: Colors.white54)),
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: _clearFilters,
+                icon: const Icon(Icons.filter_alt_off, color: Color(0xFFFF6B6B), size: 18),
+                label: const Text('Limpiar filtros', style: TextStyle(color: Color(0xFFFF6B6B))),
+              ),
+            ],
+          ),
+        );
+      }
       final messages = {
         'pendiente': ('check_circle', Colors.green,   'Sin incidentes pendientes'),
         'atendido':  ('hourglass_empty', Colors.blue, 'Ningún incidente en atención'),
@@ -434,7 +817,11 @@ class _CentralHomePageState extends State<CentralHomePage>
             statusColor: _statusColor(inc.status),
             typeIcon: _typeIcon(inc.type),
             onTap: () => _showDetail(inc),
-            onStatusChange: (newStatus) => _changeStatus(inc, newStatus),
+            onStatusChange: (newStatus) => _confirmAndChangeStatus(
+              inc,
+              newStatus,
+              newStatus == 'atendido' ? 'Atendido' : 'Resuelto',
+            ),
           );
         },
       ),
@@ -448,49 +835,122 @@ class _CentralHomePageState extends State<CentralHomePage>
       return const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B6B)));
     }
 
-    final validIncidents = _incidents
-        .where((i) => i.latitude != 0 && i.longitude != 0)
-        .toList();
+    final allValid = _incidents.where((i) => i.latitude != 0 && i.longitude != 0).toList();
+    final validIncidents = _applyFilters(allValid);
 
     final center = validIncidents.isNotEmpty
         ? LatLng(
             validIncidents.map((i) => i.latitude).reduce((a, b) => a + b) / validIncidents.length,
             validIncidents.map((i) => i.longitude).reduce((a, b) => a + b) / validIncidents.length,
           )
-        : const LatLng(-12.0464, -77.0428);
+        : (allValid.isNotEmpty
+            ? LatLng(
+                allValid.map((i) => i.latitude).reduce((a, b) => a + b) / allValid.length,
+                allValid.map((i) => i.longitude).reduce((a, b) => a + b) / allValid.length,
+              )
+            : const LatLng(-12.0464, -77.0428));
 
-    return FlutterMap(
-      options: MapOptions(initialCenter: center, initialZoom: 13),
+    return Column(
       children: [
-        TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.example.mobile',
-        ),
-        MarkerLayer(
-          markers: validIncidents.map((inc) {
-            return Marker(
-              point: LatLng(inc.latitude, inc.longitude),
-              width: 44,
-              height: 44,
-              child: GestureDetector(
-                onTap: () => _showDetail(inc),
+        _buildFilterBar(),
+        Expanded(
+          child: Stack(
+            children: [
+              FlutterMap(
+                options: MapOptions(initialCenter: center, initialZoom: 13),
+                children: [
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.example.mobile',
+                  ),
+                  MarkerLayer(
+                    markers: validIncidents.map((inc) {
+                      return Marker(
+                        point: LatLng(inc.latitude, inc.longitude),
+                        width: 44,
+                        height: 44,
+                        child: GestureDetector(
+                          onTap: () => _showDetail(inc),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: _urgencyColor(inc.urgency),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _urgencyColor(inc.urgency).withOpacity(0.5),
+                                  blurRadius: 6,
+                                ),
+                              ],
+                            ),
+                            child: Icon(_typeIcon(inc.type), color: Colors.white, size: 22),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+              // Contador de marcadores visibles
+              Positioned(
+                top: 12,
+                right: 12,
                 child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _urgencyColor(inc.urgency),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _urgencyColor(inc.urgency).withOpacity(0.5),
-                        blurRadius: 6,
+                    color: const Color(0xFF16213E).withOpacity(0.92),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: _hasActiveFilters ? const Color(0xFFFF6B6B) : Colors.white24,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.place, size: 14, color: _hasActiveFilters ? const Color(0xFFFF6B6B) : Colors.white54),
+                      const SizedBox(width: 5),
+                      Text(
+                        _hasActiveFilters
+                            ? '${validIncidents.length} de ${allValid.length}'
+                            : '${validIncidents.length} incidentes',
+                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
-                  child: Icon(_typeIcon(inc.type), color: Colors.white, size: 22),
                 ),
               ),
-            );
-          }).toList(),
+              if (validIncidents.isEmpty && _hasActiveFilters)
+                Positioned(
+                  left: 20,
+                  right: 20,
+                  top: 60,
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF16213E).withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search_off, color: Colors.white38, size: 20),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'Ningún incidente en el mapa coincide con los filtros',
+                            style: TextStyle(color: Colors.white70, fontSize: 12),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _clearFilters,
+                          child: const Text('Limpiar', style: TextStyle(color: Color(0xFFFF6B6B), fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ],
     );
