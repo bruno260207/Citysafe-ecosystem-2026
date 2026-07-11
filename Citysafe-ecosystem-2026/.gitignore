@@ -27,3 +27,7 @@ mobile/android/.gradle/
 mobile/android/captures/
 mobile/macos/Flutter/GeneratedPluginRegistrant.swift
 mobile/*.g.dart
+
+#--GODOT--
+.godot/
+/android/
