@@ -7,6 +7,7 @@ var mqtt := MqttNode.new()
 const BROKER := "wss://test.mosquitto.org:8081"
 const TOPIC := "citysafe/incidentes/#"
 const ManchaCalorScene := preload("res://Mancha_De_Calor/mancha_de_calor.tscn")
+const IconoIncidenteScene := preload("res://Icono_Incidente/IconoIncidente.tscn")
  
 func _ready() -> void:
 	mqtt.broker = BROKER
@@ -33,7 +34,6 @@ func _on_msg(topic: String, msg: PackedByteArray) -> void:
 		print("[Dashboard] Mensaje no es JSON valido: ", message)
 		return
  
-	# El topic viene como citysafe/incidentes/CAM-001
 	var partes := topic.split("/")
 	var device_id: String = partes[partes.size() - 1]
  
@@ -46,7 +46,12 @@ func _on_msg(topic: String, msg: PackedByteArray) -> void:
 		return
  
 	print("[Dashboard] Incidente '%s' urgencia %d en %s" % [tipo, urgencia, device_id])
-	generar_mancha(to_local(punto.global_position), urgencia)
+	generar_evento(to_local(punto.global_position), urgencia, tipo)
+ 
+ 
+func generar_evento(pos: Vector2, urgencia: int, tipo: String) -> void:
+	generar_mancha(pos, urgencia)
+	generar_icono(pos, tipo)
  
  
 func generar_mancha(pos: Vector2, urgencia: int) -> void:
@@ -54,9 +59,15 @@ func generar_mancha(pos: Vector2, urgencia: int) -> void:
 	add_child(mancha)
 	mancha.position = pos
  
-	# A mayor urgencia, mancha mas grande, mas intensa y algo mas duradera
 	var radio: float = 20.0 + (urgencia * 12.0)
 	var duracion: float = 2.5 + (urgencia * 0.3)
 	var intensidad: float = clamp(float(urgencia) / 5.0, 0.35, 1.0)
  
 	mancha.configurar(radio, duracion, Color(1, 0, 0, intensidad))
+ 
+ 
+func generar_icono(pos: Vector2, tipo: String) -> void:
+	var icono = IconoIncidenteScene.instantiate()
+	add_child(icono)
+	icono.position = pos
+	icono.configurar(tipo)

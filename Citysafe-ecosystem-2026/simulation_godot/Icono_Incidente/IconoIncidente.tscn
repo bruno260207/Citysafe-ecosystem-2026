@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://b8y47cwg5usk0"]
+
+[ext_resource type="Script" uid="uid://bfhob5nsr17ko" path="res://Icono_Incidente/icono_incidente.gd" id="1_wafjc"]
+
+[node name="IconoIncidente" type="Node2D"]
+scale = Vector2(0.05, 0.05)
+script = ExtResource("1_wafjc")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
